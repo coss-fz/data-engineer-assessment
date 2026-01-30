@@ -20,7 +20,7 @@ BATCH_SIZE = 10000
 class DataTransformation:
     """Transform staging data into normalized 3NF schema"""
 
-    def __init__(self, db_config: DatabaseConfig):
+    def __init__(self, db_config:DatabaseConfig):
         """Initialize data transformation"""
         self.db_config = db_config
         self.engine = db_config.get_engine()
@@ -45,7 +45,7 @@ class DataTransformation:
 
 
     def extract_location_components(
-            self, location_string: str, country: str) -> Dict[str, Optional[str]]:
+            self, location_string:str, country:str) -> Dict[str, Optional[str]]:
         """Extract city, state/province from location string"""
         if not location_string or pd.isna(location_string):
             return {'city': None, 'state_province': None, 'country': country}

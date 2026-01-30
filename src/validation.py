@@ -47,7 +47,7 @@ class DataValidator:
 
 
     @classmethod
-    def validate_raw_data(cls, df: pd.DataFrame) -> tuple[bool, Optional[str]]:
+    def validate_raw_data(cls, df:pd.DataFrame) -> tuple[bool, Optional[str]]:
         """Validate raw CSV data"""
         try:
             logger.info("Validating raw data")
@@ -63,7 +63,7 @@ class DataValidator:
 
 
     @staticmethod
-    def check_data_quality(df: pd.DataFrame) -> dict:
+    def check_data_quality(df:pd.DataFrame) -> dict:
         """Perform data quality checks and return statistics"""
         logger.info("Performing data quality checks")
 
@@ -100,7 +100,7 @@ class DataValidator:
 
 
     @staticmethod
-    def validate_skills_structure(df: pd.DataFrame) -> dict:
+    def validate_skills_structure(df:pd.DataFrame) -> dict:
         """Validate structure of job_skills and job_type_skills columns"""
         logger.info("Validating skills structure")
 
@@ -152,7 +152,7 @@ class DataValidator:
 
 
     @staticmethod
-    def generate_data_profile(df: pd.DataFrame) -> str:
+    def generate_data_profile(df:pd.DataFrame) -> str:
         """Generate a text profile of the dataset"""
         profile = []
         profile.append("=" * 100)

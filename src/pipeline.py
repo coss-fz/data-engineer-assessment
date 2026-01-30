@@ -18,14 +18,15 @@ from database import DatabaseConfig # pylint: disable=import-error
 class JobPipeline:
     """Main pipeline orchestrator for the ETL process"""
 
-    def __init__(self, csv_filepath: str):
+    def __init__(self, csv_filepath:str, only_transformation:bool=False):
         """Initialize pipeline"""
         self.csv_filepath = csv_filepath
+        self.only_transformation = only_transformation
         self.db_config = DatabaseConfig()
 
         # Setup logging
         logger.add(
-            "logs/pipeline_{time}.log",
+            "logs/pipeline_{time}.log", 
             rotation="10 MB",
             retention="10 days",
             level="INFO"
@@ -122,6 +123,23 @@ class JobPipeline:
         logger.info("STARTING JOB DATA PIPELINE")
         logger.info("=" * 100)
 
+        if self.only_transformation:
+            try:
+                logger.warning("Executing only Phase 2 (Internal Postgres Transformation)")
+                if not self.run_transformation():
+                    logger.error("Transformation phase failed")
+                    return False
+            except Exception as e: # pylint: disable=broad-exception-caught
+                logger.error(f"Pipeline failed with error: {e}")
+                return False
+            finally:
+                self.db_config.close()
+
+            logger.info("=" * 100)
+            logger.info("PIPELINE COMPLETED SUCCESSFULLY")
+            logger.info("=" * 100)
+            return True
+
         try:
             if not self.setup_database():
                 logger.error("Database setup failed")
@@ -140,9 +158,7 @@ class JobPipeline:
             logger.info("=" * 100)
             logger.info("PIPELINE COMPLETED SUCCESSFULLY")
             logger.info("=" * 100)
-
             return True
-
         except Exception as e: # pylint: disable=broad-exception-caught
             logger.error(f"Pipeline failed with error: {e}")
             return False
@@ -161,10 +177,15 @@ def main():
         default="data/data_jobs.csv",
         help="Path to input CSV file"
     )
+    parser.add_argument(
+        "--only-transformation",
+        action="store_true",
+        help="Only runs the Phase 2"
+    )
 
     args = parser.parse_args()
 
-    pipeline = JobPipeline(args.csv)
+    pipeline = JobPipeline(args.csv, only_transformation=args.only_transformation)
 
     success = pipeline.run()
 

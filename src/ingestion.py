@@ -16,12 +16,12 @@ from database import DatabaseConfig # pylint: disable=import-error
 class DataIngestion:
     """Handle data ingestion from CSV to database staging table"""
 
-    def __init__(self, db_config: DatabaseConfig):
+    def __init__(self, db_config:DatabaseConfig):
         """Initialize data ingestion"""
         self.db_config = db_config
 
 
-    def read_csv(self, filepath: str) -> pd.DataFrame:
+    def read_csv(self, filepath:str) -> pd.DataFrame:
         """Read CSV file with proper handling of complex columns"""
         logger.info(f"Reading CSV file: {filepath}")
 
@@ -63,7 +63,7 @@ class DataIngestion:
             return None
 
 
-    def load_to_staging(self, df: pd.DataFrame, batch_size: int = 10000):
+    def load_to_staging(self, df:pd.DataFrame, batch_size:int=10000):
         """Load DataFrame to staging table"""
         logger.info(f"Loading {len(df)} rows to staging table")
 
@@ -118,7 +118,7 @@ class DataIngestion:
         logger.info(f"Successfully loaded {len(df)} rows to staging table")
 
 
-    def run_ingestion(self, csv_filepath: str):
+    def run_ingestion(self, csv_filepath:str):
         """Run complete ingestion process"""
         logger.info("Starting data ingestion process")
 

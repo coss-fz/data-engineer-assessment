@@ -20,7 +20,7 @@ load_dotenv()
 class DatabaseConfig:
     """Database configuration and connection manager"""
 
-    def __init__(self, database_url: Optional[str] = None):
+    def __init__(self, database_url:Optional[str]=None):
         """Initialize database configuration"""
         self.database_url = database_url or self._build_database_url()
         self.engine: Optional[Engine] = None
@@ -69,7 +69,7 @@ class DatabaseConfig:
             return False
 
 
-    def execute_sql_file(self, filepath: str) -> bool:
+    def execute_sql_file(self, filepath:str) -> bool:
         """Execute SQL commands from a file"""
         try:
             with open(filepath, 'r', encoding='utf-8') as f:
