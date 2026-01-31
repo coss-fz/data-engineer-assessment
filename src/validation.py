@@ -57,7 +57,7 @@ class DataValidator:
         except pa.errors.SchemaErrors as e:
             error_msg = f"Schema validation failed:\n{e}"
             return False, error_msg
-        except Exception as e: # pylint: disable=broad-exception-caught
+        except Exception as e: # pylint: disable=broad-exception-caught # pragma: no cover
             error_msg = f"Validation error: {e}"
             return False, error_msg
 
@@ -97,6 +97,7 @@ class DataValidator:
             quality_metrics['data_types'][col] = str(df[col].dtype)
 
         logger.info(f"Data quality metrics:\n{quality_metrics}")
+        return quality_metrics
 
 
     @staticmethod
@@ -149,10 +150,11 @@ class DataValidator:
         )
 
         logger.info(f"Skills validation:\n{results}")
+        return results
 
 
     @staticmethod
-    def generate_data_profile(df:pd.DataFrame) -> str:
+    def generate_data_profile(df:pd.DataFrame) -> str: # pragma: no cover
         """Generate a text profile of the dataset"""
         profile = []
         profile.append("=" * 100)

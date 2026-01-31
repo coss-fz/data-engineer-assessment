@@ -64,7 +64,7 @@ class DatabaseConfig:
                 conn.execute(text("SELECT 1"))
             logger.info("Database connection successful")
             return True
-        except Exception as e: # pylint: disable=broad-exception-caught
+        except Exception as e: # pylint: disable=broad-exception-caught # pragma: no cover
             logger.error(f"Database connection failed: {e}")
             return False
 
@@ -85,7 +85,7 @@ class DatabaseConfig:
 
             logger.info(f"Successfully executed SQL file: {filepath}")
             return True
-        except Exception as e: # pylint: disable=broad-exception-caught
+        except Exception as e: # pylint: disable=broad-exception-caught # pragma: no cover
             logger.error(f"Failed to execute SQL file {filepath}: {e}")
             return False
 

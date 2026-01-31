@@ -67,9 +67,9 @@ class JobPipeline:
             logger.error(f"Schema validation failed: {error_msg}")
             return False
 
-        validator.check_data_quality(df)
+        _ = validator.check_data_quality(df)
 
-        validator.validate_skills_structure(df)
+        _ = validator.validate_skills_structure(df)
 
         validator.generate_data_profile(df)
 

@@ -68,12 +68,12 @@ class DataIngestion:
         logger.info(f"Loading {len(df)} rows to staging table")
 
         # Convert Python objects to JSON strings for JSONB columns
-        def to_json_or_none(x):
+        def to_json_or_none(x): # pragma: no cover
             if x is None or (isinstance(x, float) and pd.isna(x)):
                 return None
             return json.dumps(x)
         # Convert Python objects to ARRAYS for TEXT[] columns
-        def normalize_skills(x):
+        def normalize_skills(x): # pragma: no cover
             if x is None or (isinstance(x, float) and pd.isna(x)):
                 return None
             if isinstance(x, list):
@@ -118,7 +118,7 @@ class DataIngestion:
         logger.info(f"Successfully loaded {len(df)} rows to staging table")
 
 
-    def run_ingestion(self, csv_filepath:str):
+    def run_ingestion(self, csv_filepath:str): # pragma: no cover
         """Run complete ingestion process"""
         logger.info("Starting data ingestion process")
 

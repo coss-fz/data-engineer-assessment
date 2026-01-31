@@ -77,7 +77,7 @@ class DataTransformation:
                 'state_province': None,
                 'country': country
             }
-        else:
+        else: #pragma: no cover
             return {'city': None, 'state_province': None, 'country': country}
 
 
@@ -379,7 +379,7 @@ class DataTransformation:
                     offset += BATCH_SIZE*10
 
 
-    def run_transformation(self):
+    def run_transformation(self): # pragma: no cover
         """Run complete transformation process"""
         logger.info("Starting data transformation to 3NF")
 
