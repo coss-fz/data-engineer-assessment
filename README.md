@@ -30,35 +30,35 @@ This pipeline processes job posting data from a CSV file containing ~50,000+ job
 ## Architecture
 The pipeline follows a classic ETL (Extract, Transform, Load) pattern with three main phases:
 ```
-                                                                     ┌──────────────────┐
-                                                                     │    CSV Source    │
-                                                                     │  (data_jobs.csv) │
-                                                                     └────────┬─────────┘
-                                                                              │
-                                                                              ▼
-                                                                     ┌──────────────────┐
-                                                                     │     Phase 1:     │
-                                                                     │  Data Ingestion  │
-                                                                     │  - Read CSV      │
-                                                                     │  - Validate      │
-                                                                     │  - Load Staging  │
-                                                                     └────────┬─────────┘
-                                                                              │
-                                                                              ▼
-                                                                     ┌──────────────────┐
-                                                                     │     Phase 2:     │
-                                                                     │  Transformation  │
-                                                                     │  - Normalize     │
-                                                                     │  - Create 3NF    │
-                                                                     │  - Load Dims     │
-                                                                     │  - Load Facts    │
-                                                                     └────────┬─────────┘
-                                                                              │
-                                                                              ▼
-                                                                     ┌──────────────────┐
-                                                                     │  PostgreSQL DB   │
-                                                                     │   (3NF Schema)   │
-                                                                     └──────────────────┘
+                                       ┌──────────────────┐
+                                       │    CSV Source    │
+                                       │  (data_jobs.csv) │
+                                       └────────┬─────────┘
+                                                │
+                                                ▼
+                                       ┌──────────────────┐
+                                       │     Phase 1:     │
+                                       │  Data Ingestion  │
+                                       │  - Read CSV      │
+                                       │  - Validate      │
+                                       │  - Load Staging  │
+                                       └────────┬─────────┘
+                                                │
+                                                ▼
+                                       ┌──────────────────┐
+                                       │     Phase 2:     │
+                                       │  Transformation  │
+                                       │  - Normalize     │
+                                       │  - Create 3NF    │
+                                       │  - Load Dims     │
+                                       │  - Load Facts    │
+                                       └────────┬─────────┘
+                                                │
+                                                ▼
+                                       ┌──────────────────┐
+                                       │  PostgreSQL DB   │
+                                       │   (3NF Schema)   │
+                                       └──────────────────┘
 ```
 
 ### Data Flow
@@ -237,3 +237,90 @@ pytest tests/<file>.py
 ### Tests Structure
 - **Unit Tests**: Mock database connections, test logic in isolation
 - **Coverage Target**: Aim for >80% code coverage (in this scenario some redundant features were excluded)
+
+
+## OLAP Design (Bonus)
+
+### Conceptual Star Schema for Business Intelligence
+To support business intelligence dashboards, the 3NF model would be transformed into a **Star Schema**:
+
+#### Fact Table: `fact_job_postings`
+**Granularity**: One row per job posting
+
+**Measures** (Numerical metrics):
+- `salary_year_avg` - Average annual salary
+- `salary_hour_avg` - Average hourly rate
+- `skill_count` - Number of skills required
+- `is_remote` - Boolean (1/0)
+- `has_degree_requirement` - Boolean (1/0)
+- `has_health_insurance` - Boolean (1/0)
+- `days_since_posted` - Calculated metric
+
+**Foreign Keys**:
+- `company_key` → `dim_company`
+- `location_key` → `dim_location`
+- `date_key` → `dim_date`
+- `platform_key` → `dim_platform`
+- `schedule_key` → `dim_schedule_type`
+- `title_key` → `dim_job_title`
+
+#### Dimension Tables (Part 1)
+1. **dim_company**
+   - `company_key` (surrogate key)
+   - `company_name`
+   - `company_size` (if available)
+   - `industry` (if available)
+2. **dim_location**
+   - `location_key` (surrogate key)
+   - `city`
+   - `state_province`
+   - `country`
+3. **dim_date**
+   - `date_key` (surrogate key)
+   - `full_date`
+   - `year`, `quarter`, `month`, `day`
+   - `day_of_week`
+   - `is_weekend`
+   - `fiscal_year`, `fiscal_quarter`
+4. **dim_job_title**
+   - `title_key` (surrogate key)
+   - `job_title_short`
+   - `job_title_category` (e.g., "Engineering", "Analytics")
+   - `seniority_level` (Entry, Mid, Senior)
+5. **dim_platform**
+   - `platform_key` (surrogate key)
+   - `platform_name`
+   - `platform_type`
+6. **dim_schedule_type**
+   - `schedule_key` (surrogate key)
+   - `schedule_type_name`
+   - `is_full_time`
+
+#### Bridge Table for Skills: `bridge_job_skills`
+Handles the many-to-many relationship:
+- `job_key` (FK to fact_job_postings)
+- `skill_key` (FK to dim_skill)
+
+#### Dimension Tables (Part 2)
+7. **dim_skill**
+- `skill_key`
+- `skill_name`
+- `skill_category`
+
+<!-- #### Junk Dimension: `dim_job_attributes`
+Consolidates low-cardinality boolean flags:
+- `attribute_key`
+- `is_remote`
+- `no_degree_required`
+- `has_health_insurance`
+- `attribute_combination_name` (e.g., "Remote + No Degree + Benefits")
+
+This reduces the number of dimensions and simplifies the star schema. -->
+
+### ETL from 3NF to Star Schema
+The transformation from our 3NF model to the star schema would involve:
+1. **Dimension Loading**: Populate dimensions with surrogate keys
+2. **Fact Table Loading**: Join staging/3NF tables to get dimension keys
+3. **Bridge Table Loading**: Handle skill relationships
+4. **Junk Dimension**: Pre-compute all boolean combinations
+5. **SCD**: If tracking dimension changes over time
