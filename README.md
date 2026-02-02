@@ -6,11 +6,13 @@ The goal is to process and model job postings to create a robust database that w
 - [Overview](#overview)
 - [Architecture](#architecture)
 - [Design Decisions](#design-decisions)
-- [Database Schema (3NF)](#database-schema-3nf)
+- [Database Schema (3NF)](#database-schema-3nf--entity-relationship-diagram)
 - [Project Structure](#project-structure)
 - [Setup Instructions](#setup-instructions)
-- [Running the Pipeline](#running-the-pipeline)
+- [Running the Pipeline](#running-pipeline)
 - [Testing](#testing)
+- [OLAP Design (Bonus)](#olap-design-bonus) 
+- [Orchestrator Integration - Airflow (Bonus)](#orchestrator-integration---airflow-bonus)
 
 
 ## Overview
@@ -125,8 +127,6 @@ job_pipeline/
 ├── config/                         # Configuration files
 ├── data/
 │   └── data_jobs.csv               # Input CSV
-├── docs/
-│   └── OLAP_DESIGN.md              # Star schema design for analytics
 ├── logs/                           # Generated log files
 ├── sql/
 │   └── schema.sql                  # Database schema (3NF)
@@ -259,7 +259,7 @@ To support business intelligence dashboards, the 3NF model would be transformed 
 **Foreign Keys**:
 - `company_key` → `dim_company`
 - `location_key` → `dim_location`
-- `date_key` → `dim_date`
+- `full_date` → `dim_date`
 - `platform_key` → `dim_platform`
 - `schedule_key` → `dim_schedule_type`
 - `title_key` → `dim_job_title`
@@ -268,25 +268,25 @@ To support business intelligence dashboards, the 3NF model would be transformed 
 1. **dim_company**
    - `company_key` (surrogate key)
    - `company_name`
-   - `company_size` (if available)
-   - `industry` (if available)
+   - `company_size`
+   - `industry`
 2. **dim_location**
    - `location_key` (surrogate key)
    - `city`
    - `state_province`
    - `country`
 3. **dim_date**
-   - `date_key` (surrogate key)
-   - `full_date`
-   - `year`, `quarter`, `month`, `day`
+   - `full_date` (key)
+   - `year`
+   - `quarter`
+   - `month`
+   - `day`
    - `day_of_week`
-   - `is_weekend`
-   - `fiscal_year`, `fiscal_quarter`
 4. **dim_job_title**
    - `title_key` (surrogate key)
    - `job_title_short`
-   - `job_title_category` (e.g., "Engineering", "Analytics")
-   - `seniority_level` (Entry, Mid, Senior)
+   - `job_title_category`
+   - `seniority_level`
 5. **dim_platform**
    - `platform_key` (surrogate key)
    - `platform_name`
@@ -298,24 +298,25 @@ To support business intelligence dashboards, the 3NF model would be transformed 
 
 #### Bridge Table for Skills: `bridge_job_skills`
 Handles the many-to-many relationship:
-- `job_key` (FK to fact_job_postings)
-- `skill_key` (FK to dim_skill)
+- `job_key` (FK &rarr; fact_job_postings)
+- `skill_key` (FK &rarr; dim_skill)
 
 #### Dimension Tables (Part 2)
 7. **dim_skill**
-- `skill_key`
+- `skill_key` (surrogate key)
 - `skill_name`
 - `skill_category`
 
-<!-- #### Junk Dimension: `dim_job_attributes`
-Consolidates low-cardinality boolean flags:
-- `attribute_key`
+#### Junk Dimension: `dim_job_attributes`
+Consolidates low-cardinality boolean flags (this reduces the number of dimensions and simplifies the star schema):
+- `attributes_key`
 - `is_remote`
-- `no_degree_required`
+- `has_degree_req`
 - `has_health_insurance`
-- `attribute_combination_name` (e.g., "Remote + No Degree + Benefits")
+- `attribute_combination_name` (e.g., "Remote + No Degree + No Health Insurance")
 
-This reduces the number of dimensions and simplifies the star schema. -->
+### Entity-Relationship Diagram
+![ERD](config/ERD_OLAP.png)
 
 ### ETL from 3NF to Star Schema
 The transformation from our 3NF model to the star schema would involve:
@@ -324,3 +325,80 @@ The transformation from our 3NF model to the star schema would involve:
 3. **Bridge Table Loading**: Handle skill relationships
 4. **Junk Dimension**: Pre-compute all boolean combinations
 5. **SCD**: If tracking dimension changes over time
+
+
+## Orchestrator Integration - Airflow (Bonus)
+
+To integrate this pipeline with an orchestrator like Apache Airflow, we treat the entire transformation process as a single "task".
+
+First, is necessary to copy the source file to the data folder:
+```bash
+cp data/data_jobs.csv <road_to_ariflow_env>/airflow/data/
+```
+
+Then, for the execution, is only neccessary to copy the DAG file to the *dags* folder and enable it:
+```bash
+cp <road_to_directory>/<dag_filename>.py <road_to_ariflow_env>/airflow/dags/
+airflow dags unpause job_posting_etl_dag_id
+```
+
+```
+┌─────────────────────────────────────────┐
+│           Airflow Scheduler             │
+│  ┌───────────────────────────────────┐  │
+│  │      job_posting_etl_dag_id       │  │
+│  │                                   │  │
+│  │        check_source_data          │  │
+│  │        notify_completion          │  │
+│  └───────────────────────────────────┘  │
+└─────────────────────────────────────────┘
+```
+
+```python
+from datetime import datetime, timedelta
+from airflow import DAG
+from airflow.operators.bash import BashOperator
+from airflow.operators.python import PythonOperator
+from airflow.utils.dates import days_ago
+
+
+
+
+default_args = {
+    'owner': 'airflow',
+    'depends_on_past': False,
+    'email_on_failure': True,
+    'email_on_retry': False,
+    'retries': 1,
+    'retry_delay': timedelta(minutes=10),
+}
+
+
+with DAG(
+    'job_posting_etl_dag_id',
+    default_args=default_args,
+    description='ETL pipeline for Job Postings',
+    schedule_interval='0 0 * * *',
+    start_date=datetime(2026,1,1),
+    catchup=False,
+) as dag:
+
+    task_check_source_file = BashOperator(
+        task_id='check_source_file',
+        bash_command='test -f /opt/airflow/data/data_jobs.csv',
+    )
+
+    task_run_pipeline = BashOperator(
+        task_id='run_pipeline',
+        bash_command='python /opt/airflow/src/pipeline.py --csv /opt/airflow/data/data_jobs.csv',
+        env={
+            'POSTGRES_HOST'      : '<host>',
+            'POSTGRES_USER'      : '<user>',
+            'POSTGRES_PASSWORD'  : '<pwd>',
+            'POSTGRES_DB'        : '<db>',
+            'POSTGRES_PORT'      : '<port_number>'
+        }
+    )
+
+    check_file_exists >> run_pipeline
+```
